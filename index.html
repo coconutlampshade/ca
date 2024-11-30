@@ -556,8 +556,15 @@
             ctx.fillStyle = 'white';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
+            if (currentRow >= height - 1 && infiniteScroll) {
+                // Remove oldest row from history (except first row)
+                cellHistory = [cellHistory[0], ...cellHistory.slice(-height + 2)];
+                // Adjust current row to maintain position
+                currentRow = height - 2;
+            }
+            
             // Draw ALL rows - including history and current
-            for (let y = 0; y <= currentRow + 1; y++) {
+            for (let y = 0; y <= Math.min(currentRow + 1, height - 1); y++) {
                 const rowToDraw = (y === currentRow + 1) ? cells : cellHistory[y];
                 for (let x = 0; x < width; x++) {
                     if (rowToDraw[x]) {
@@ -568,7 +575,9 @@
             
             drawGrid();
             
-            currentRow++;
+            if (!infiniteScroll || currentRow < height - 1) {
+                currentRow++;
+            }
             document.getElementById('generationCount').textContent = currentRow;
         }
 
