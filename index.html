@@ -46,6 +46,13 @@
             margin: 20px 0;
             display: flex;
             justify-content: center;
+            transition: height 0.3s ease;
+        }
+
+        .canvas-container.full-screen {
+            height: auto;
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         canvas {
@@ -367,6 +374,7 @@
     </div>
 
     <script>
+        let isFullScreen = false;
         let canvas;
         let ctx;
         let cells;
@@ -423,7 +431,11 @@
             console.log('Click handler added');
             
             initCanvas();
-            reset();
+            
+            // Set middle cell to black
+            const middleCell = Math.floor(width / 2);
+            cells[middleCell] = 1;
+            drawCell(middleCell, 0, 1);
             
             const infiniteBtn = document.getElementById('infiniteBtn');
             infiniteBtn.textContent = 'Infinite Scroll: On';
@@ -431,31 +443,26 @@
 
         function initCanvas() {
             const mainContent = document.querySelector('.main-content');
-            const containerWidth = mainContent.offsetWidth - 60; // Account for padding
+            const containerWidth = mainContent.offsetWidth - 60;
             
-            // Smaller cell size for more cells
-            cellSize = 4; // Reduced from 10 to 4
-            
-            // Calculate dimensions
+            // Calculate width based on container
             let newWidth = Math.floor(containerWidth / cellSize) * cellSize;
-            let newHeight = Math.floor(newWidth * 0.8) * cellSize; // Increased height ratio
             
-            // Update canvas dimensions
+            // Set height based on mode
+            let newHeight = isFullScreen ? (513 * cellSize) : Math.floor(newWidth * 0.8);
+            
             canvas.width = newWidth;
             canvas.height = newHeight;
             
-            // Calculate cells in width and height
             width = Math.floor(newWidth / cellSize);
             height = Math.floor(newHeight / cellSize);
             
-            console.log(`Canvas size: ${width} x ${height} cells`); // Debug log
-            
-            // Reset the simulation
+            // Reset simulation
             cells = new Array(width).fill(0);
             cellHistory = [];
             currentRow = 0;
             
-            // Clear and redraw
+            // Clear canvas
             ctx.fillStyle = 'white';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             drawGrid();
@@ -582,17 +589,58 @@
             stop();
             currentRow = 0;
             cells = new Array(width).fill(0);
+            
+            // Set middle cell to black
+            const middleCell = Math.floor(width / 2);
+            cells[middleCell] = 1;
+            
             cellHistory = [];
             
             ctx.fillStyle = 'white';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             drawGrid();
+            
+            // Draw the middle cell
+            drawCell(middleCell, 0, 1);
         }
 
         function toggleInfinite() {
             infiniteScroll = !infiniteScroll;
             const infiniteBtn = document.getElementById('infiniteBtn');
             infiniteBtn.textContent = `Infinite Scroll: ${infiniteScroll ? 'On' : 'Off'}`;
+        }
+
+        function toggleFullScreen() {
+            stop();
+            isFullScreen = !isFullScreen;
+            
+            // Update button text
+            const fullScreenBtn = document.getElementById('fullScreenBtn');
+            fullScreenBtn.textContent = `Full Screen: ${isFullScreen ? 'On' : 'Off'}`;
+            
+            // Update container class
+            const container = document.querySelector('.canvas-container');
+            container.classList.toggle('full-screen', isFullScreen);
+            
+            // Save current state
+            const savedCells = [...cells];
+            
+            // Reinitialize with new dimensions
+            initCanvas();
+            
+            // Restore state
+            cells = savedCells;
+            cells.forEach((cell, x) => {
+                drawCell(x, 0, cell);
+            });
+            
+            // Disable infinite scroll in full screen mode
+            if (isFullScreen) {
+                infiniteScroll = false;
+                document.getElementById('infiniteBtn').disabled = true;
+            } else {
+                document.getElementById('infiniteBtn').disabled = false;
+            }
         }
 
         window.addEventListener('load', init);
