@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>1D Cellular Automata - Rule 30</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+            min-height: 100vh;
+        }
+
+        #container {
+            display: flex;
+            gap: 30px;
+            margin: 0;
+            width: 100%;
+            max-width: 1600px;
+            align-items: flex-start;
+        }
+
+        .main-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            width: calc(100% - 380px);
+            max-width: 1200px;
+        }
+
+        .control-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            width: 350px;
+            position: sticky;
+            top: 20px;
+        }
+
+        .canvas-container {
+            width: 100%;
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        canvas {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1200px) {
+            #container {
+                max-width: 1000px;
+            }
+            
+            .main-content {
+                width: calc(100% - 330px);
+            }
+            
+            .control-panel {
+                width: 300px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            #container {
+                flex-direction: column;
+            }
+
+            .main-content {
+                width: 100%;
+            }
+
+            .control-panel {
+                width: 100%;
+                position: static;
+                order: -1;
+            }
+        }
+
+        .controls {
+            margin: 10px 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            justify-content: center;
+        }
+        button {
+            padding: 8px 16px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button.active {
+            background: #2196F3;
+        }
+        .speed-controls, .random-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        input[type="range"] {
+            width: 150px;
+        }
+        .speed-value {
+            min-width: 40px;
+        }
+        input[type="number"] {
+            width: 60px;
+            padding: 5px;
+        }
+        .rule-explanation {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f8f8;
+            border-radius: 4px;
+        }
+        .rule-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .rule-case {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 5px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 60px;
+        }
+        .rule-case div:first-child {
+            display: flex;
+            justify-content: center;
+            gap: 2px;
+        }
+        .rule-case div:first-child span {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border: 1px solid #999;
+        }
+        .rule-case div:first-child span.filled {
+            background: black;
+        }
+        .cell {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 1px solid #999;
+            background: white;
+        }
+        .cell.filled {
+            background: black;
+        }
+        .control-panel {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin: 15px 0;
+            width: 100%;
+        }
+
+        .control-group {
+            border: 1px solid #eee;
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+
+        .control-group-title {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        button {
+            padding: 8px 16px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-width: 100px;
+        }
+
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .color-picker {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .generation-counter {
+            font-size: 1.1em;
+            color: #666;
+            margin: 10px 0;
+            text-align: center;
+        }
+
+        .speed-controls {
+            background: #f8f8f8;
+            padding: 10px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div class="main-content">
+            <h2>1D Cellular Automata - Rule 30</h2>
+            <div class="canvas-container">
+                <canvas id="automataCanvas" style="cursor: pointer;"></canvas>
+            </div>
+            <p>Click on the top row to set initial cells, or use Random Seed</p>
+        </div>
+
+        <div class="control-panel">
+            <div class="generation-counter">
+                Generation: <span id="generationCount">0</span>
+            </div>
+            
+            <div class="control-group">
+                <div class="control-group-title">Simulation Controls</div>
+                <div class="controls">
+                    <button id="startBtn" onclick="start()">Start</button>
+                    <button id="stopBtn" onclick="stop()" disabled>Stop</button>
+                    <button id="resetBtn" onclick="reset()">Reset</button>
+                    <button id="infiniteBtn" onclick="toggleInfinite()">Infinite Scroll: On</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="control-group-title">Speed & Random Settings</div>
+                <div class="speed-controls">
+                    <div class="slider-container">
+                        <label>Animation Speed:</label>
+                        <input type="range" id="speedSlider" min="1" max="100" value="20">
+                        <span id="speedValue" class="speed-value">20%</span>
+                    </div>
+                </div>
+                <div class="random-controls">
+                    <button onclick="randomSeed()">Random Seed</button>
+                    <label>Density (%):
+                        <input type="number" id="density" value="50" min="0" max="100" step="1">
+                    </label>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="control-group-title">Rule 30 Explanation</div>
+                <div class="rule-explanation">
+                    <p>Rule 30 is a cellular automaton rule introduced by Stephen Wolfram. Each cell's next state is determined by its current state and its two neighbors, following these patterns:</p>
+                    <div class="rule-grid">
+                        <div class="rule-case">
+                            <div>
+                                <span class="cell filled"></span>
+                                <span class="cell filled"></span>
+                                <span class="cell filled"></span>
+                            </div>
+                            <div>↓</div>
+                            <span class="cell"></span>
+                            <div>0</div>
+                        </div>
+                        <div class="rule-case">
+                            <div>
+                                <span class="cell filled"></span>
+                                <span class="cell filled"></span>
+                                <span class="cell"></span>
+                            </div>
+                            <div>↓</div>
+                            <span class="cell"></span>
+                            <div>0</div>
+                        </div>
+                        <div class="rule-case">
+                            <div>
+                                <span class="cell filled"></span>
+                                <span class="cell"></span>
+                                <span class="cell filled"></span>
+                            </div>
+                            <div>↓</div>
+                            <span class="cell"></span>
+                            <div>0</div>
+                        </div>
+                        <div class="rule-case">
+                            <div>
+                                <span class="cell filled"></span>
+                                <span class="cell"></span>
+                                <span class="cell"></span>
+                            </div>
+                            <div>↓</div>
+                            <span class="cell filled"></span>
+                            <div>1</div>
+                        </div>
+                        <div class="rule-case">
+                            <div>
+                                <span class="cell"></span>
+                                <span class="cell filled"></span>
+                                <span class="cell filled"></span>
+                            </div>
+                            <div>↓</div>
+                            <span class="cell filled"></span>
+                            <div>1</div>
+                        </div>
+                        <div class="rule-case">
+                            <div>
+                                <span class="cell"></span>
+                                <span class="cell filled"></span>
+                                <span class="cell"></span>
+                            </div>
+                            <div>↓</div>
+                            <span class="cell filled"></span>
+                            <div>1</div>
+                        </div>
+                        <div class="rule-case">
+                            <div>
+                                <span class="cell"></span>
+                                <span class="cell"></span>
+                                <span class="cell filled"></span>
+                            </div>
+                            <div>↓</div>
+                            <span class="cell filled"></span>
+                            <div>1</div>
+                        </div>
+                        <div class="rule-case">
+                            <div>
+                                <span class="cell"></span>
+                                <span class="cell"></span>
+                                <span class="cell"></span>
+                            </div>
+                            <div>↓</div>
+                            <span class="cell"></span>
+                            <div>0</div>
+                        </div>
+                    </div>
+                    <p>The name "Rule 30" comes from the binary number 00011110 (30 in decimal) formed by reading the bottom row of the rule from right to left.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let canvas;
+        let ctx;
+        let cells;
+        let cellHistory;
+        let currentRow = 0;
+        let running = false;
+        let cellSize = 4;
+        let width;
+        let height;
+        let animationId = null;
+        let lastUpdateTime = 0;
+        let infiniteScroll = true;
+        let updateInterval = 50;
+        let cellColor = '#000000';
+        let gridColor = '#dddddd';
+
+        const speedSlider = document.getElementById('speedSlider');
+        const speedValue = document.getElementById('speedValue');
+
+        function handleCanvasClick(e) {
+            console.log('Canvas clicked!');
+            
+            if (running || currentRow > 0) {
+                console.log('Blocked: running=', running, 'currentRow=', currentRow);
+                return;
+            }
+            
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            const x = Math.floor(mouseX * (canvas.width / rect.width) / cellSize);
+            const y = Math.floor(mouseY * (canvas.height / rect.height) / cellSize);
+            
+            console.log('Click coordinates:', { mouseX, mouseY, cellX: x, cellY: y });
+            
+            if (y === 0 && x >= 0 && x < width) {
+                console.log('Valid click on first row');
+                cells[x] = 1 - cells[x];
+                console.log('Cell', x, 'toggled to', cells[x]);
+                drawCell(x, 0, cells[x]);
+            }
+        }
+
+        function init() {
+            console.log('Initializing...');
+            
+            canvas = document.getElementById('automataCanvas');
+            ctx = canvas.getContext('2d');
+            
+            canvas.removeEventListener('click', handleCanvasClick);
+            canvas.addEventListener('click', handleCanvasClick);
+            
+            console.log('Click handler added');
+            
+            initCanvas();
+            reset();
+            
+            const infiniteBtn = document.getElementById('infiniteBtn');
+            infiniteBtn.textContent = 'Infinite Scroll: On';
+        }
+
+        function initCanvas() {
+            const mainContent = document.querySelector('.main-content');
+            const containerWidth = mainContent.offsetWidth - 60; // Account for padding
+            
+            // Smaller cell size for more cells
+            cellSize = 4; // Reduced from 10 to 4
+            
+            // Calculate dimensions
+            let newWidth = Math.floor(containerWidth / cellSize) * cellSize;
+            let newHeight = Math.floor(newWidth * 0.8) * cellSize; // Increased height ratio
+            
+            // Update canvas dimensions
+            canvas.width = newWidth;
+            canvas.height = newHeight;
+            
+            // Calculate cells in width and height
+            width = Math.floor(newWidth / cellSize);
+            height = Math.floor(newHeight / cellSize);
+            
+            console.log(`Canvas size: ${width} x ${height} cells`); // Debug log
+            
+            // Reset the simulation
+            cells = new Array(width).fill(0);
+            cellHistory = [];
+            currentRow = 0;
+            
+            // Clear and redraw
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            drawGrid();
+        }
+
+        function drawGrid() {
+            ctx.strokeStyle = gridColor;
+            for (let x = 0; x <= width; x++) {
+                ctx.beginPath();
+                ctx.moveTo(x * cellSize, 0);
+                ctx.lineTo(x * cellSize, height * cellSize);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= height; y++) {
+                ctx.beginPath();
+                ctx.moveTo(0, y * cellSize);
+                ctx.lineTo(width * cellSize, y * cellSize);
+                ctx.stroke();
+            }
+        }
+
+        function drawCell(x, y, alive) {
+            console.log('Drawing cell:', x, y, alive);
+            ctx.fillStyle = alive ? '#000000' : 'white';
+            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+            ctx.strokeStyle = '#dddddd';
+            ctx.strokeRect(x * cellSize, y * cellSize, cellSize, cellSize);
+        }
+
+        function randomSeed() {
+            stop();
+            currentRow = 0;
+            cellHistory = [];
+            const density = document.getElementById('density').value / 100;
+            cells = new Array(width).fill(0).map(() => 
+                Math.random() < density ? 1 : 0
+            );
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            drawGrid();
+            cells.forEach((cell, x) => {
+                drawCell(x, 0, cell);
+            });
+        }
+
+        document.querySelector('.random-controls button').onclick = randomSeed;
+
+        function applyRule30(left, center, right) {
+            if (left && center && right) return 0;
+            if (left && center && !right) return 0;
+            if (left && !center && right) return 0;
+            if (left && !center && !right) return 1;
+            if (!left && center && right) return 1;
+            if (!left && center && !right) return 1;
+            if (!left && !center && right) return 1;
+            if (!left && !center && !right) return 0;
+        }
+
+        function shiftCanvasUp() {
+            const imageData = ctx.getImageData(0, cellSize, canvas.width, canvas.height - cellSize);
+            ctx.putImageData(imageData, 0, 0);
+            currentRow--;
+        }
+
+        function update() {
+            if (currentRow >= height - 1) {
+                if (infiniteScroll) {
+                    shiftCanvasUp();
+                } else {
+                    stop();
+                    return;
+                }
+            }
+
+            const newCells = new Array(width).fill(0);
+            for (let x = 0; x < width; x++) {
+                const left = cells[(x - 1 + width) % width];
+                const center = cells[x];
+                const right = cells[(x + 1) % width];
+                newCells[x] = applyRule30(left, center, right);
+                drawCell(x, currentRow + 1, newCells[x]);
+            }
+            cells = newCells;
+            cellHistory.push([...cells]);
+            currentRow++;
+        }
+
+        function animate(timestamp) {
+            if (!running) return;
+
+            const elapsed = timestamp - lastUpdateTime;
+            const interval = 1000 / (speedSlider.value / 2);
+
+            if (elapsed > interval) {
+                update();
+                lastUpdateTime = timestamp;
+            }
+
+            animationId = requestAnimationFrame(animate);
+        }
+
+        function start() {
+            if (!running) {
+                running = true;
+                lastUpdateTime = 0;
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('stopBtn').disabled = false;
+                requestAnimationFrame(animate);
+            }
+        }
+
+        function stop() {
+            running = false;
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+        }
+
+        function reset() {
+            console.log('Resetting...');
+            stop();
+            currentRow = 0;
+            cells = new Array(width).fill(0);
+            cellHistory = [];
+            
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            drawGrid();
+        }
+
+        function toggleInfinite() {
+            infiniteScroll = !infiniteScroll;
+            const infiniteBtn = document.getElementById('infiniteBtn');
+            infiniteBtn.textContent = `Infinite Scroll: ${infiniteScroll ? 'On' : 'Off'}`;
+        }
+
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
