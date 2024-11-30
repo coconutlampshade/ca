@@ -261,8 +261,6 @@
                     <button id="stopBtn" onclick="stop()" disabled>Stop</button>
                     <button id="resetBtn" onclick="reset()">Reset</button>
                     <button id="infiniteBtn" onclick="toggleInfinite()">Infinite Scroll: On</button>
-                    <button id="fullScreenBtn" onclick="toggleFullScreen()">Full Screen: Off</button>
-                    <button id="saveBtn" onclick="saveHighResImage()">Save Image</button>
                 </div>
             </div>
 
@@ -272,6 +270,7 @@
                     <div class="slider-container">
                         <label>Animation Speed:</label>
                         <input type="range" id="speedSlider" min="1" max="100" value="20">
+                        <span id="speedValue" class="speed-value">20%</span>
                     </div>
                 </div>
                 <div class="random-controls">
@@ -391,8 +390,6 @@
         let updateInterval = 50;
         let cellColor = '#000000';
         let gridColor = '#dddddd';
-        let viewportOffset = 0;
-        let isFirstUpdate = true;
 
         const speedSlider = document.getElementById('speedSlider');
         const speedValue = document.getElementById('speedValue');
@@ -431,12 +428,11 @@
             canvas.removeEventListener('click', handleCanvasClick);
             canvas.addEventListener('click', handleCanvasClick);
             
+            console.log('Click handler added');
+            
             initCanvas();
             
-            // Clear all cells first
-            cells = new Array(width).fill(0);
-            
-            // Set ONLY the middle cell to black
+            // Set middle cell to black
             const middleCell = Math.floor(width / 2);
             cells[middleCell] = 1;
             drawCell(middleCell, 0, 1);
@@ -449,15 +445,19 @@
             const mainContent = document.querySelector('.main-content');
             const containerWidth = mainContent.offsetWidth - 60;
             
+            // Calculate width based on container
             let newWidth = Math.floor(containerWidth / cellSize) * cellSize;
+            
+            // Set height based on mode
             let newHeight = isFullScreen ? (513 * cellSize) : Math.floor(newWidth * 0.8);
             
             canvas.width = newWidth;
-            canvas.height = newHeight + cellSize;
+            canvas.height = newHeight;
             
             width = Math.floor(newWidth / cellSize);
             height = Math.floor(newHeight / cellSize);
             
+            // Reset simulation
             cells = new Array(width).fill(0);
             cellHistory = [];
             currentRow = 0;
@@ -470,21 +470,18 @@
 
         function drawGrid() {
             ctx.strokeStyle = gridColor;
-            ctx.beginPath();
-            
-            // Vertical lines
             for (let x = 0; x <= width; x++) {
+                ctx.beginPath();
                 ctx.moveTo(x * cellSize, 0);
                 ctx.lineTo(x * cellSize, height * cellSize);
+                ctx.stroke();
             }
-            
-            // Horizontal lines
             for (let y = 0; y <= height; y++) {
+                ctx.beginPath();
                 ctx.moveTo(0, y * cellSize);
                 ctx.lineTo(width * cellSize, y * cellSize);
+                ctx.stroke();
             }
-            
-            ctx.stroke();
         }
 
         function drawCell(x, y, alive) {
@@ -514,58 +511,43 @@
         document.querySelector('.random-controls button').onclick = randomSeed;
 
         function applyRule30(left, center, right) {
-            const pattern = (left << 2) | (center << 1) | right;
-            switch(pattern) {
-                case 7: return 0;  // 111
-                case 6: return 0;  // 110
-                case 5: return 0;  // 101
-                case 4: return 1;  // 100
-                case 3: return 1;  // 011
-                case 2: return 1;  // 010
-                case 1: return 1;  // 001
-                case 0: return 0;  // 000
-                default: return 0;
-            }
+            if (left && center && right) return 0;
+            if (left && center && !right) return 0;
+            if (left && !center && right) return 0;
+            if (left && !center && !right) return 1;
+            if (!left && center && right) return 1;
+            if (!left && center && !right) return 1;
+            if (!left && !center && right) return 1;
+            if (!left && !center && !right) return 0;
+        }
+
+        function shiftCanvasUp() {
+            const imageData = ctx.getImageData(0, cellSize, canvas.width, canvas.height - cellSize);
+            ctx.putImageData(imageData, 0, 0);
+            currentRow--;
         }
 
         function update() {
-            if (currentRow >= height && !infiniteScroll) {
-                stop();
-                return;
+            if (currentRow >= height - 1) {
+                if (infiniteScroll) {
+                    shiftCanvasUp();
+                } else {
+                    stop();
+                    return;
+                }
             }
 
-            // Calculate next row
-            const nextRow = new Array(width).fill(0);
+            const newCells = new Array(width).fill(0);
             for (let x = 0; x < width; x++) {
                 const left = cells[(x - 1 + width) % width];
                 const center = cells[x];
                 const right = cells[(x + 1) % width];
-                nextRow[x] = applyRule30(left, center, right);
+                newCells[x] = applyRule30(left, center, right);
+                drawCell(x, currentRow + 1, newCells[x]);
             }
-
-            // Save current state and update
+            cells = newCells;
             cellHistory.push([...cells]);
-            cells = nextRow;
-            
-            // Clear canvas
-            ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw ALL rows - including history and current
-            for (let y = 0; y <= currentRow + 1; y++) {
-                // For the last row, use 'cells', otherwise use history
-                const rowToDraw = (y === currentRow + 1) ? cells : cellHistory[y];
-                for (let x = 0; x < width; x++) {
-                    if (rowToDraw[x]) {
-                        drawCell(x, y, 1);
-                    }
-                }
-            }
-            
-            drawGrid();
-            
             currentRow++;
-            document.getElementById('generationCount').textContent = currentRow;
         }
 
         function animate(timestamp) {
@@ -603,21 +585,22 @@
         }
 
         function reset() {
+            console.log('Resetting...');
             stop();
             currentRow = 0;
             cells = new Array(width).fill(0);
-            cellHistory = [];
             
-            // Set middle cell
+            // Set middle cell to black
             const middleCell = Math.floor(width / 2);
             cells[middleCell] = 1;
             
-            // Clear canvas
+            cellHistory = [];
+            
             ctx.fillStyle = 'white';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             drawGrid();
             
-            // Draw initial state
+            // Draw the middle cell
             drawCell(middleCell, 0, 1);
         }
 
@@ -658,63 +641,6 @@
             } else {
                 document.getElementById('infiniteBtn').disabled = false;
             }
-        }
-
-        function saveHighResImage() {
-            // Create a temporary canvas at 2x resolution
-            const tempCanvas = document.createElement('canvas');
-            const tempCtx = tempCanvas.getContext('2d');
-            
-            // Set dimensions (2x original)
-            tempCanvas.width = canvas.width * 2;
-            tempCanvas.height = canvas.height * 2;
-            
-            // Scale up and redraw everything
-            tempCtx.scale(2, 2);
-            
-            // Fill background
-            tempCtx.fillStyle = 'white';
-            tempCtx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw all history rows
-            for (let y = 0; y < cellHistory.length; y++) {
-                const rowCells = cellHistory[y];
-                for (let x = 0; x < width; x++) {
-                    if (rowCells[x]) {
-                        tempCtx.fillStyle = '#000000';
-                        tempCtx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
-                    }
-                }
-            }
-            
-            // Draw current row
-            for (let x = 0; x < width; x++) {
-                if (cells[x]) {
-                    tempCtx.fillStyle = '#000000';
-                    tempCtx.fillRect(x * cellSize, currentRow * cellSize, cellSize, cellSize);
-                }
-            }
-            
-            // Draw grid last
-            tempCtx.strokeStyle = gridColor;
-            for (let x = 0; x <= width; x++) {
-                tempCtx.beginPath();
-                tempCtx.moveTo(x * cellSize, 0);
-                tempCtx.lineTo(x * cellSize, height * cellSize);
-                tempCtx.stroke();
-            }
-            for (let y = 0; y <= height; y++) {
-                tempCtx.beginPath();
-                tempCtx.moveTo(0, y * cellSize);
-                tempCtx.lineTo(width * cellSize, y * cellSize);
-                tempCtx.stroke();
-            }
-            
-            // Create download link
-            const link = document.createElement('a');
-            link.download = 'rule30.png';
-            link.href = tempCanvas.toDataURL('image/png');
-            link.click();
         }
 
         window.addEventListener('load', init);
